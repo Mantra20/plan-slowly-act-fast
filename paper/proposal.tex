@@ -1,0 +1,125 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+
+\title{\textbf{Plan Slowly, Act Fast:\\When Should a Robot Think?}\\[4pt]
+\large Cost-aware arbitration between planning and habit\\with context memory, for world-model-based robots}
+\author{Doctoral research proposal}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent A robot that plans with a learned world model can handle situations it has never seen, but every plan costs computation, latency and energy. Biological agents avoid this cost: they delegate most behaviour to fast habits and deliberate only when the world surprises them, and they store motor memories by context so that a familiar situation is recognised rather than relearned. This proposal asks when a robot should spend computation to plan, and how it can reuse what it has learned when a situation returns, so as to match a permanent planner at a fraction of its cost. I propose an agent made of a planner, a context-indexed habit and a cost-aware arbiter, studied in simulation and then on a real SO-101 arm. On a first testbed with three alternating hidden contexts, the arbiter with context memory succeeds in 99.7\% of episodes against 96.9\% for a permanent planner, with 5.8 times less computation. The work is organised as two self-contained papers.
+\end{abstract}
+
+\section{Motivation}
+A robot that plans with a world model, that is, a learned model of how the world responds to its actions, can cope with novel situations. Planning is expensive, however: V-JEPA~2 plans on real robot arms but takes about 16 seconds per action~\cite{assran2025vjepa2}. The brain works differently. It entrusts most behaviour to fast habits and engages deliberation only when the world is surprising~\cite{daw2005uncertainty,keramati2011speed}. It also organises its motor memory by context, which allows a previously experienced situation to be recovered quickly~\cite{heald2021contextual}.
+
+Earlier work has transferred this trade-off to robots, but in tabular reinforcement learning~\cite{dromnelle2023reducing}, or has learned to choose between reacting and planning without any memory of contexts~\cite{labiosa2026when}. Other work triggers the adaptation of a world model when it makes errors, but relearns every context it has already encountered~\cite{domberg2026selfadapting}. To the best of my knowledge, no existing work combines a deep world model, an arbiter that accounts for the cost of computation, and a memory of recurring contexts on a real robot.
+
+\section{Research question}
+\begin{quote}
+\emph{When should a robot spend computation to plan, and how can it reuse what it has learned when a situation returns, in order to succeed as well as a permanent planner with a fraction of its computation?}
+\end{quote}
+
+\section{Neuroscience-inspired design}
+The design keeps two principles from the neuroscience of arbitration and makes them operational.
+
+\begin{enumerate}
+\item \textbf{Two arbitration signals:} Classical accounts trigger deliberation on uncertainty or surprise~\cite{daw2005uncertainty}. On the first testbed, surprise from the world model alone is not enough: a habit that has become bad produces no surprise. The arbiter therefore uses the \emph{surprise} of the world model, which indicates that the world has changed, and the \emph{competence of the habit}, measured as the expected cost gap between habit and plan, which indicates that the habit no longer works.
+
+\item \textbf{Habits indexed by hidden context:} Contextual inference~\cite{heald2021contextual} suggests that the brain infers a latent context and retrieves the matching motor memory, while allowing the context to be new. The agent recognises the hidden context online, stores one habit per context and keeps an explicit ``new context'' hypothesis, so that a returning context is recognised rather than relearned. Prior robot arbiters either have no context memory~\cite{labiosa2026when} or relearn each context~\cite{domberg2026selfadapting}.
+\end{enumerate}
+
+\section{Proposed approach}
+The agent has three components. The \emph{planner} imagines trajectories with the world model and picks the best one: it is accurate but expensive. The \emph{habit} is a small fast policy, learned continually by imitating the planner's decisions and stored per context. The \emph{arbiter} runs the planner only when the expected gain exceeds the cost of computation.
+
+\paragraph{Preliminary results:} On a first testbed in which three hidden contexts alternate and return, the arbiter with context memory already succeeds in 99.7\% of episodes, against 96.9\% for a permanent planner, with 5.8 times less computation. These are early simulation results on a simple testbed and are not yet evidence for the real-robot setting.
+
+The work is organised in four parts, first in simulation (MuJoCo or ManiSkill), then on an SO-101 arm driven with LeRobot.
+
+\begin{enumerate}
+\item \textbf{Arbitration in simulation:} Train a compact world model of TD-MPC2 type~\cite{hansen2024tdmpc2} on manipulation tasks whose dynamics change: carried mass, friction, a worn actuator. Build the arbiter on the two distinct signals described above, world-model surprise and habit competence.
+
+\item \textbf{Context memory:} Recognise the hidden context online, allowing for a new context, and store one habit per context. Measure recovery time when a context returns.
+
+\item \textbf{Continual learning and neuroscience:} Prevent forgetting through offline generative replay, with faster learning under strong surprise. Test whether the agent reproduces known signatures of arbitration in humans and animals: habits that persist after extensive training, a return to deliberation after a context change, and a speed--accuracy trade-off.
+
+\item \textbf{Real robot and measurement of computation:} Port the architecture to the SO-101 arm and measure real cost in milliseconds per action and in joules on an embedded board. Compare against a permanent planner, a frozen habit and existing arbiters~\cite{dromnelle2023reducing,labiosa2026when}.
+\end{enumerate}
+
+\section{Expected contributions}
+The thesis is organised as two self-contained papers, with a shared open-source code base compatible with LeRobot.
+\begin{enumerate}
+\item \textbf{Architecture and computation:} A plan/habit arbiter for deep world models, evaluated in computation, latency and energy measured on embedded hardware.
+\item \textbf{Continual learning and computational neuroscience:} A context memory that turns the return of a known situation into recognition instead of relearning, with generative replay against forgetting, and a testable model of arbitration that allows the cost-benefit reading~\cite{kool2017cost} to be confronted with its recent critiques~\cite{fehersilva2023rethinking}.
+\end{enumerate}
+
+\begin{thebibliography}{10}
+
+\bibitem{assran2025vjepa2}
+M.~Assran et~al.
+\newblock V-JEPA 2: Self-supervised video models enable understanding, prediction and planning.
+\newblock \emph{arXiv:2506.09985}, 2025.
+
+\bibitem{daw2005uncertainty}
+N.~D. Daw, Y.~Niv, and P.~Dayan.
+\newblock Uncertainty-based competition between prefrontal and dorsolateral striatal systems for behavioral control.
+\newblock \emph{Nature Neuroscience}, 2005.
+
+\bibitem{keramati2011speed}
+M.~Keramati, A.~Dezfouli, and P.~Piray.
+\newblock Speed/accuracy trade-off between the habitual and the goal-directed processes.
+\newblock \emph{PLoS Computational Biology}, 2011.
+
+\bibitem{heald2021contextual}
+J.~B. Heald, M.~Lengyel, and D.~M. Wolpert.
+\newblock Contextual inference underlies the learning of sensorimotor repertoires.
+\newblock \emph{Nature}, 2021.
+
+\bibitem{dromnelle2023reducing}
+R.~Dromnelle et~al.
+\newblock Reducing computational cost during robot navigation and human-robot interaction with a human-inspired reinforcement learning architecture.
+\newblock \emph{International Journal of Social Robotics}, 2023.
+
+\bibitem{labiosa2026when}
+A.~Labiosa and J.~P. Hanna.
+\newblock When to plan: Learning to select between reactive control and deliberative planning.
+\newblock \emph{Reinforcement Learning Journal}, 2026.
+
+\bibitem{domberg2026selfadapting}
+F.~Domberg and G.~Schildbach.
+\newblock Self-adapting robotic agents through online continual reinforcement learning with world model feedback.
+\newblock \emph{arXiv:2603.04029}, 2026.
+
+\bibitem{hansen2024tdmpc2}
+N.~Hansen, H.~Su, and X.~Wang.
+\newblock TD-MPC2: Scalable, robust world models for continuous control.
+\newblock In \emph{ICLR}, 2024.
+
+\bibitem{kool2017cost}
+W.~Kool, S.~J. Gershman, and F.~A. Cushman.
+\newblock Cost-benefit arbitration between multiple reinforcement-learning systems.
+\newblock \emph{Psychological Science}, 2017.
+
+\bibitem{fehersilva2023rethinking}
+C.~Feher~da Silva, G.~Lombardi, M.~Edelson, and T.~A. Hare.
+\newblock Rethinking model-based and model-free influences on mental effort and striatal prediction errors.
+\newblock \emph{Nature Human Behaviour}, 2023.
+
+\end{thebibliography}
+\end{document}
